@@ -42,13 +42,13 @@ def format_password(packet):
 			result += requested_file_path
 		result += " "
 		creds = contains_basic_auth.group(1).rstrip()
+		result += "[" + str(creds) + "] "
 		plain = ''
 		try:
 			plain = b64decode(creds)
 		except TypeError:
 			plain = "DecodingError"
-		result += "[" + str(plain) + "] "
-		result += "[" + creds + "]"
+		result += "[" + str(plain) + "]"
 		return result
 
 check_for_password = lambda packet: basic_auth_filter.search(str(packet))
@@ -89,7 +89,7 @@ def print_usage():
 	print("\t\t\t Sniff for one login on interface eth1, for up to ten minutes, whichever comes first")
 
 def print_header():
-	print("Time | Cl.ie.nt.IP:Port -> Se.rv.er.IP:Port | METHOD http://host/path/file [decodedusername:andpassword] [encodedcredentials]")
+	print("Time | Cl.ie.nt.IP:Port -> Se.rv.er.IP:Port | METHOD http://host/path/file | [encodedcredentials] [decodedusername:andpassword]")
 
 if "-h" in argv or "--help" in argv:
 	print_usage()
