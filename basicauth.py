@@ -123,6 +123,7 @@ if len(argv) % 2 == 1:									# we should have an odd amount of arguments after
 		else:													
 			print_usage()
 			exit()
+	print_header()
 	saved_packets = sniff(**sniff_args)
 	if saved_packets:											# if we actually captured any packets
 		if dump_file:												# and if we set a dump file
