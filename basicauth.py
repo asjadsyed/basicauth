@@ -10,7 +10,7 @@ from time import ctime
 conf.verb = 0
 dump_file = None
 saved_packets = None
-open_in_wireshark = True
+open_in_wireshark = False
 default_bpf_filter = "tcp port 80"
 
 basic_auth_filter = re.compile(r"Authorization: Basic (.*)")
