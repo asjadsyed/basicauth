@@ -16,7 +16,7 @@ default_bpf_filter = "tcp port 80"
 basic_auth_filter = compile(r"Authorization: Basic (.*)")
 host_filter = compile(r"Host: (.*)")
 valid_methods = ["OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT"]
-method_filter = compile("(" + '|'.join(valid_methods) + r") (.*) HTTP.*?\r\n")
+method_filter = compile("(" + '|'.join(valid_methods) + r") (.*) HTTP.*?")
 # method_filter = re.compile(r"([A-Z]*?) (.*) HTTP.*?") # matches capital letters that come before the request, unintentionally (you might see a RGET or HGET or something)
 
 def format_password(packet):
