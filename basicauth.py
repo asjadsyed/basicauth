@@ -110,11 +110,11 @@ sniff_args = { 'prn' : format_password, 'store' : 0, 'filter' : default_bpf_filt
 													# time to handle options without arguments
 if "-q" in argv or "--quiet" in argv:
 	sniff_args['prn'] = None							# unset print function
-	argv = [arg for arg in argv if arg != "-q"]			# remove all quiet options now
+	argv = [arg for arg in argv if arg != "-q" and arg != "--quiet"]			# remove all quiet options now
 if "-W" in argv or "--wireshark" in argv or "--Wireshark" in argv:
 	open_in_wireshark = True							# set value to check later for deciding whether or not to open wireshark
-	sniff_args['store'] = 1								# re-enable store, by default is off
-	argv = [arg for arg in argv if arg != "-W"]			# remove all wireshark options now
+	sniff_args['store'] = 1								# re-enable store, by default is off, and is needed to oped in wireshark
+	argv = [arg for arg in argv if arg != "-W" and arg != "--wireshark" and arg != "--Wireshark"]			# remove all wireshark options now
 													# time to handle options with arguments
 if len(argv) % 2 == 1:									# we should have an odd amount of arguments after removing quiet and wireshark options (because each option should have a value after it)
 	for arg_index in range(1, len(argv), 2): 				# start on the first argument up until the last, skipping every second argument
