@@ -7,9 +7,9 @@ from base64 import b64decode
 from time import ctime
 getLogger("scapy.runtime").setLevel(ERROR)
 from scapy.all import *
-dump_file = None
-getLogger("scapy.runtime").setLevel(WARNING)
 conf.verb = 0
+getLogger("scapy.runtime").setLevel(WARNING)
+dump_file = None
 saved_packets = None
 open_in_wireshark = False
 default_bpf_filter = "tcp port 80"
