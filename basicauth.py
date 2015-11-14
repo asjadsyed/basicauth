@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
-from logging import getLogger, ERROR
-getLogger("scapy.runtime").setLevel(ERROR)
-from scapy.all import *
+from logging import getLogger, ERROR, WARNING
 from sys import argv, exit
 from re import compile
 from base64 import b64decode
 from time import ctime
-conf.verb = 0
+getLogger("scapy.runtime").setLevel(ERROR)
+from scapy.all import *
 dump_file = None
+getLogger("scapy.runtime").setLevel(WARNING)
+conf.verb = 0
 saved_packets = None
 open_in_wireshark = False
 default_bpf_filter = "tcp port 80"
