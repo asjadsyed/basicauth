@@ -117,7 +117,7 @@ if "-q" in argv or "--quiet" in argv:
 	argv = [arg for arg in argv if arg != "-q" and arg != "--quiet"]			# remove all quiet options now
 if "-W" in argv or "--wireshark" in argv or "--Wireshark" in argv:
 	open_in_wireshark = True							# set value to check later for deciding whether or not to open wireshark
-	sniff_args['store'] = 1								# re-enable store, by default is off, and is needed to oped in wireshark
+	sniff_args['store'] = 1								# re-enable store, by default is off, and is needed to open in wireshark
 	argv = [arg for arg in argv if arg != "-W" and arg != "--wireshark" and arg != "--Wireshark"]			# remove all wireshark options now
 													# time to handle options with arguments
 if len(argv) % 2 == 1:									# we should have an odd amount of arguments after removing quiet and wireshark options (because each option should have a value after it)
