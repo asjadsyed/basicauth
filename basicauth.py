@@ -32,7 +32,6 @@ def format_password(packet):
 		except IndexError:
 			client = "ClientParseError"
 		result += client + " -> "
-		del client
 		server = ''
 		try:
 			server = packet[IP].dst
@@ -40,7 +39,6 @@ def format_password(packet):
 		except IndexError:
 			client = "ServerParseError"
 		result += server + " | "
-		del server
 		contains_method = method_filter.search(str(packet))
 		if contains_method:
 			result += contains_method.group(1).strip() + " "
@@ -51,7 +49,6 @@ def format_password(packet):
 		if contains_method:
 			requested_file_path = contains_method.group(2).strip()
 			result += requested_file_path
-		del contains_host, contains_method
 		result += " | "
 		creds = contains_basic_auth.group(1).strip()
 		result += "[" + str(creds) + "] "
