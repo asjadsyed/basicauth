@@ -17,25 +17,25 @@ default_bpf_filter = "tcp port 80"
 basic_auth_filter = compile(r"Authorization: Basic (.*)")
 host_filter = compile(r"Host: (.*)")
 valid_methods = ["OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT"]
-method_filter = compile("(" + '|'.join(valid_methods) + r") (.*) HTTP.*?")
+method_filter = compile("(" + "|".join(valid_methods) + r") (.*) HTTP.*?")
 # method_filter = re.compile(r"([A-Z]*?) (.*) HTTP.*?") # matches capital letters that come before the request, unintentionally (you might see a RGET or HGET or something)
 
 def format_password(packet):
 	contains_basic_auth = basic_auth_filter.search(str(packet))
 	if contains_basic_auth:
-		result = ''
+		result = ""
 		result += ctime() + " | "
-		client = ''
+		client = ""
 		try:
 			client = str(packet[IP].src)
-			client += ':' + str(packet[TCP].sport)
+			client += ":" + str(packet[TCP].sport)
 		except IndexError:
 			client = "ClientParseError"
 		result += client + " -> "
-		server = ''
+		server = ""
 		try:
 			server = packet[IP].dst
-			server += ':' + str(packet[TCP].dport)
+			server += ":" + str(packet[TCP].dport)
 		except IndexError:
 			client = "ServerParseError"
 		result += server + " | "
@@ -52,7 +52,7 @@ def format_password(packet):
 		result += " | "
 		creds = contains_basic_auth.group(1).strip()
 		result += "[" + str(creds) + "] "
-		plain = ''
+		plain = ""
 		try:
 			plain = b64decode(creds)
 		except TypeError:
@@ -106,33 +106,33 @@ def print_header():
 if "-h" in argv or "--help" in argv:
 	print_usage()
 	exit()
-		
-sniff_args = { 'prn' : format_password, 'store' : 0, 'filter' : default_bpf_filter, 'lfilter' : check_for_password }
+
+sniff_args = { "prn" : format_password, "store" : 0, "filter" : default_bpf_filter, "lfilter" : check_for_password }
 													# time to handle options without arguments
 if "-q" in argv or "--quiet" in argv:
-	sniff_args['prn'] = None							# unset print function
+	sniff_args["prn"] = None							# unset print function
 	argv = [arg for arg in argv if arg != "-q" and arg != "--quiet"]			# remove all quiet options now
 if "-W" in argv or "--wireshark" in argv or "--Wireshark" in argv:
 	open_in_wireshark = True							# set value to check later for deciding whether or not to open wireshark
-	sniff_args['store'] = 1								# re-enable store, by default is off, and is needed to open in wireshark
+	sniff_args["store"] = 1								# re-enable store, by default is off, and is needed to open in wireshark
 	argv = [arg for arg in argv if arg != "-W" and arg != "--wireshark" and arg != "--Wireshark"]			# remove all wireshark options now
 													# time to handle options with arguments
 if len(argv) % 2 == 1:									# we should have an odd amount of arguments after removing quiet and wireshark options (because each option should have a value after it)
 	for arg_index in range(1, len(argv), 2): 				# start on the first argument up until the last, skipping every second argument
 		if argv[arg_index] in ["-i", "--interface"]:			# interface
-			sniff_args['iface'] = argv[arg_index + 1]
+			sniff_args["iface"] = argv[arg_index + 1]
 		elif argv[arg_index] in ["-r", "--read"]:				# file to read from
-			sniff_args['offline'] = argv[arg_index + 1]
+			sniff_args["offline"] = argv[arg_index + 1]
 		elif argv[arg_index] in ["-c", "--count"]:				# count
-			sniff_args['count'] = int(argv[arg_index + 1])
+			sniff_args["count"] = int(argv[arg_index + 1])
 		elif argv[arg_index] in ["-t", "--time"]:				# time
-			sniff_args['timeout'] = float(argv[arg_index + 1])
+			sniff_args["timeout"] = float(argv[arg_index + 1])
 		elif argv[arg_index] in ["-bpf", "--bpf", "--berkeley", "--berkeleypf"]:		# berkeley packet filter
-			sniff_args['filter'] = argv[arg_index + 1]
+			sniff_args["filter"] = argv[arg_index + 1]
 		elif argv[arg_index] in ["-w", "--write"]:							# write to file
-			sniff_args['store'] = 1									# re-enable store, by default is off
+			sniff_args["store"] = 1									# re-enable store, by default is off
 			dump_file = argv[arg_index + 1]							# set file to dump packets to
-		else:													
+		else:
 			print_usage()
 			exit()
 	print_header()
