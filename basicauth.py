@@ -5,23 +5,24 @@ import logging
 import re
 import sys
 import time
+from typing import List
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 conf.verb = 0
 logging.getLogger("scapy.runtime").setLevel(logging.WARNING)
 
 DEFAULT_BPF_FILTER: str = "tcp port 80"
-basic_auth_filter = re.compile(rb"Authorization: Basic (.*)")
-host_filter = re.compile(rb"Host: (.*)")
-valid_methods = [b"OPTIONS", b"GET", b"HEAD", b"POST", b"PUT", b"DELETE", b"TRACE", b"CONNECT"]
-method_filter = re.compile(b"(" + b"|".join(valid_methods) + b") (.*) HTTP.*?")
+BASIC_AUTH_FILTER: re.Pattern = re.compile(rb"Authorization: Basic (.*)")
+HOST_FILTER: re.Pattern = re.compile(rb"Host: (.*)")
+VALID_METHODS: List[bytes] = [b"OPTIONS", b"GET", b"HEAD", b"POST", b"PUT", b"DELETE", b"TRACE", b"CONNECT"]
+METHOD_FILTER: re.Pattern = re.compile(b"(" + b"|".join(VALID_METHODS) + b") (.*) HTTP.*?")
 
 
 def format_password(packet):
 	if Raw not in packet:
 		return
 	raw = packet[Raw].load
-	contains_basic_auth = basic_auth_filter.search(raw)
+	contains_basic_auth = BASIC_AUTH_FILTER.search(raw)
 	if contains_basic_auth:
 		result = ""
 		result += time.ctime() + " | "
@@ -37,7 +38,7 @@ def format_password(packet):
 		except IndexError:
 			server = "ServerParseError"
 		result += server + " | "
-		contains_method = method_filter.search(bytes(packet))
+		contains_method = METHOD_FILTER.search(bytes(packet))
 		method = ""
 		method_with_spacing = ""
 		if contains_method:
@@ -45,7 +46,7 @@ def format_password(packet):
 			method_with_spacing = f"{method} "
 			result += method_with_spacing
 		url = ""
-		contains_host = host_filter.search(bytes(packet))
+		contains_host = HOST_FILTER.search(bytes(packet))
 		if contains_host:
 			host = contains_host.group(1).rstrip().decode()
 			url += f"http://{host}"
@@ -67,7 +68,7 @@ def format_password(packet):
 def check_for_password(packet) -> bool:
     if Raw not in packet:
         return False
-    return basic_auth_filter.search(packet[Raw].load) is not None
+    return BASIC_AUTH_FILTER.search(packet[Raw].load) is not None
 
 def print_usage(argv):
 	whitespace_for_indent = " " * len(argv[0])
