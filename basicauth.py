@@ -9,11 +9,8 @@ getLogger("scapy.runtime").setLevel(ERROR)
 from scapy.all import *
 conf.verb = 0
 getLogger("scapy.runtime").setLevel(WARNING)
-dump_file = None
-saved_packets = None
-open_in_wireshark = False
-default_bpf_filter = "tcp port 80"
 
+DEFAULT_BPF_FILTER: str = "tcp port 80"
 basic_auth_filter = compile(rb"Authorization: Basic (.*)")
 host_filter = compile(rb"Host: (.*)")
 valid_methods = ["OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT"]
@@ -113,46 +110,51 @@ def print_usage():
 def print_header():
 	print("Time and Date | ClientIP:Port -> ServerIP:Port | METHOD http://host/path/file | [encodedcredentials] [decodedusername:andpassword]")
 
-if "-h" in argv or "--help" in argv:
-	print_usage()
-	exit()
+def main(argv):
+	open_in_wireshark = False
+	dump_file = None
+	if "-h" in argv or "--help" in argv:
+		print_usage()
+		exit()
 
-sniff_args = {"prn": format_password, "store": 0, "filter": default_bpf_filter, "lfilter": check_for_password}
+	sniff_args = {"prn": format_password, "store": 0, "filter": DEFAULT_BPF_FILTER, "lfilter": check_for_password}
 													# time to handle options without arguments
-if "-q" in argv or "--quiet" in argv:
-	sniff_args["prn"] = None							# unset print function
-	argv = [arg for arg in argv if arg != "-q" and arg != "--quiet"]			# remove all quiet options now
-if "-W" in argv or "--wireshark" in argv or "--Wireshark" in argv:
-	open_in_wireshark = True							# set value to check later for deciding whether or not to open wireshark
-	sniff_args["store"] = 1								# re-enable store, by default is off, and is needed to open in wireshark
-	argv = [arg for arg in argv if arg != "-W" and arg != "--wireshark" and arg != "--Wireshark"]			# remove all wireshark options now
+	if "-q" in argv or "--quiet" in argv:
+		sniff_args["prn"] = None							# unset print function
+		argv = [arg for arg in argv if arg != "-q" and arg != "--quiet"]			# remove all quiet options now
+	if "-W" in argv or "--wireshark" in argv or "--Wireshark" in argv:
+		open_in_wireshark = True							# set value to check later for deciding whether or not to open wireshark
+		sniff_args["store"] = 1								# re-enable store, by default is off, and is needed to open in wireshark
+		argv = [arg for arg in argv if arg != "-W" and arg != "--wireshark" and arg != "--Wireshark"]			# remove all wireshark options now
 													# time to handle options with arguments
-if len(argv) % 2 == 1:									# we should have an odd amount of arguments after removing quiet and wireshark options (because each option should have a value after it)
-	for arg_index in range(1, len(argv), 2): 				# start on the first argument up until the last, skipping every second argument
-		if argv[arg_index] in ["-i", "--interface"]:			# interface
-			sniff_args["iface"] = argv[arg_index + 1]
-		elif argv[arg_index] in ["-r", "--read"]:				# file to read from
-			sniff_args["offline"] = argv[arg_index + 1]
-		elif argv[arg_index] in ["-c", "--count"]:				# count
-			sniff_args["count"] = int(argv[arg_index + 1])
-		elif argv[arg_index] in ["-t", "--time"]:				# time
-			sniff_args["timeout"] = float(argv[arg_index + 1])
-		elif argv[arg_index] in ["-bpf", "--bpf", "--berkeley", "--berkeleypf"]:		# berkeley packet filter
-			sniff_args["filter"] = argv[arg_index + 1]
-		elif argv[arg_index] in ["-w", "--write"]:							# write to file
-			sniff_args["store"] = 1									# re-enable store, by default is off
-			dump_file = argv[arg_index + 1]							# set file to dump packets to
-		else:
-			print_usage()
-			exit()
-	print_header()
-	saved_packets = sniff(**sniff_args)
-	if saved_packets:											# if we actually captured any packets
-		if dump_file:												# and if we set a dump file
-			wrpcap(dump_file, saved_packets)							# write them
-		if open_in_wireshark:										# also if we want to open in wireshark
-			wireshark(saved_packets)									# do it
-else:													# if we don't have an odd amount of arguments, they didn't enter valid arguments
-	print_usage()
-	exit()
+	if len(argv) % 2 == 1:									# we should have an odd amount of arguments after removing quiet and wireshark options (because each option should have a value after it)
+		for arg_index in range(1, len(argv), 2): 				# start on the first argument up until the last, skipping every second argument
+			if argv[arg_index] in ["-i", "--interface"]:			# interface
+				sniff_args["iface"] = argv[arg_index + 1]
+			elif argv[arg_index] in ["-r", "--read"]:				# file to read from
+				sniff_args["offline"] = argv[arg_index + 1]
+			elif argv[arg_index] in ["-c", "--count"]:				# count
+				sniff_args["count"] = int(argv[arg_index + 1])
+			elif argv[arg_index] in ["-t", "--time"]:				# time
+				sniff_args["timeout"] = float(argv[arg_index + 1])
+			elif argv[arg_index] in ["-bpf", "--bpf", "--berkeley", "--berkeleypf"]:		# berkeley packet filter
+				sniff_args["filter"] = argv[arg_index + 1]
+			elif argv[arg_index] in ["-w", "--write"]:							# write to file
+				sniff_args["store"] = 1									# re-enable store, by default is off
+				dump_file = argv[arg_index + 1]							# set file to dump packets to
+			else:
+				print_usage()
+				exit()
+		print_header()
+		saved_packets = sniff(**sniff_args)
+		if saved_packets:											# if we actually captured any packets
+			if dump_file:												# and if we set a dump file
+				wrpcap(dump_file, saved_packets)							# write them
+			if open_in_wireshark:										# also if we want to open in wireshark
+				wireshark(saved_packets)									# do it
+	else:													# if we don't have an odd amount of arguments, they didn't enter valid arguments
+		print_usage()
+		exit()
 
+if __name__ == "__main__":
+	main(argv)
