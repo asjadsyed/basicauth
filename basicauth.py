@@ -18,33 +18,26 @@ VALID_METHODS: List[bytes] = [b"OPTIONS", b"GET", b"HEAD", b"POST", b"PUT", b"DE
 METHOD_FILTER: re.Pattern = re.compile(b"(" + b"|".join(VALID_METHODS) + b") (.*) HTTP.*?")
 
 
-def format_password(packet):
+def format_password(packet) -> Optional[str]:
 	if Raw not in packet:
 		return
 	raw = packet[Raw].load
 	contains_basic_auth = BASIC_AUTH_FILTER.search(raw)
 	if contains_basic_auth:
-		result = ""
-		result += time.ctime() + " | "
-		client = ""
+		now = time.ctime()
 		try:
 			client = f"{packet[IP].src}:{packet[TCP].sport}"
 		except IndexError:
 			client = "ClientParseError"
-		result += client + " -> "
-		server = ""
 		try:
 			server = f"{packet[IP].dst}:{packet[TCP].dport}"
 		except IndexError:
 			server = "ServerParseError"
-		result += server + " | "
-		contains_method = METHOD_FILTER.search(bytes(packet))
-		method = ""
 		method_with_spacing = ""
+		contains_method = METHOD_FILTER.search(bytes(packet))
 		if contains_method:
 			method = contains_method.group(1).strip().decode()
 			method_with_spacing = f"{method} "
-			result += method_with_spacing
 		url = ""
 		contains_host = HOST_FILTER.search(bytes(packet))
 		if contains_host:
@@ -53,16 +46,12 @@ def format_password(packet):
 		if contains_method:
 			requested_file_path = contains_method.group(2).strip().decode()
 			url += requested_file_path
-		result += url
-		result += " | ["
 		creds = contains_basic_auth.group(1).strip().decode()
-		result += f"{creds}"
-		plain = ""
 		try:
 			plain = base64.b64decode(creds).decode()
 		except TypeError:
 			plain = "DecodingError"
-		result += f"] [{plain}]"
+		result = f"{now} | {client} -> {server} | {method_with_spacing}{url} | [{creds}] [{plain}]"
 		return result
 
 def check_for_password(packet) -> bool:
