@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from logging import getLogger, ERROR, WARNING
 from sys import argv, exit
@@ -14,53 +14,63 @@ saved_packets = None
 open_in_wireshark = False
 default_bpf_filter = "tcp port 80"
 
-basic_auth_filter = compile(r"Authorization: Basic (.*)")
-host_filter = compile(r"Host: (.*)")
+basic_auth_filter = compile(rb"Authorization: Basic (.*)")
+host_filter = compile(rb"Host: (.*)")
 valid_methods = ["OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT"]
-method_filter = compile("(" + "|".join(valid_methods) + r") (.*) HTTP.*?")
-# method_filter = re.compile(r"([A-Z]*?) (.*) HTTP.*?") # matches capital letters that come before the request, unintentionally (you might see a RGET or HGET or something)
+valid_methods = [b"OPTIONS", b"GET", b"HEAD", b"POST", b"PUT", b"DELETE", b"TRACE", b"CONNECT"]
+method_filter = compile(b"(" + b"|".join(valid_methods) + b") (.*) HTTP.*?")
 
 def format_password(packet):
-	contains_basic_auth = basic_auth_filter.search(str(packet))
+	if Raw not in packet:
+		return
+	raw = packet[Raw].load
+	contains_basic_auth = basic_auth_filter.search(raw)
 	if contains_basic_auth:
 		result = ""
 		result += ctime() + " | "
 		client = ""
 		try:
-			client = str(packet[IP].src)
-			client += ":" + str(packet[TCP].sport)
+			client = f"{packet[IP].src}:{packet[TCP].sport}"
 		except IndexError:
 			client = "ClientParseError"
 		result += client + " -> "
 		server = ""
 		try:
-			server = packet[IP].dst
-			server += ":" + str(packet[TCP].dport)
+			server = f"{packet[IP].dst}:{packet[TCP].dport}"
 		except IndexError:
-			client = "ServerParseError"
+			server = "ServerParseError"
 		result += server + " | "
-		contains_method = method_filter.search(str(packet))
+		contains_method = method_filter.search(bytes(packet))
+		method = ""
+		method_with_spacing = ""
 		if contains_method:
-			result += contains_method.group(1).strip() + " "
-		contains_host = host_filter.search(str(packet))
+			method = contains_method.group(1).strip().decode()
+			method_with_spacing = f"{method} "
+			result += method_with_spacing
+		url = ""
+		contains_host = host_filter.search(bytes(packet))
 		if contains_host:
-			host = contains_host.group(1).rstrip()
-			result += "http://" + host
+			host = contains_host.group(1).rstrip().decode()
+			url += f"http://{host}"
 		if contains_method:
-			requested_file_path = contains_method.group(2).strip()
-			result += requested_file_path
-		result += " | "
-		creds = contains_basic_auth.group(1).strip()
-		result += "[" + str(creds) + "] "
+			requested_file_path = contains_method.group(2).strip().decode()
+			url += requested_file_path
+		result += url
+		result += " | ["
+		creds = contains_basic_auth.group(1).strip().decode()
+		result += f"{creds}"
 		plain = ""
 		try:
-			plain = b64decode(creds)
+			plain = b64decode(creds).decode()
 		except TypeError:
 			plain = "DecodingError"
-		result += "[" + str(plain) + "]"
+		result += f"] [{plain}]"
 		return result
 
-check_for_password = lambda packet: basic_auth_filter.search(str(packet))
+def check_for_password(packet) -> bool:
+    if Raw not in packet:
+        return False
+    return basic_auth_filter.search(packet[Raw].load) is not None
 
 def print_usage():
 	whitespace_for_indent = " " * len(argv[0])
@@ -101,13 +111,13 @@ def print_usage():
 	print("     \t\t\t Sniff for one login on interface eth1, for up to ten minutes, whichever comes first")
 
 def print_header():
-	print("Time and Date | Cl.ie.nt.IP:Port -> Se.rv.er.IP:Port | METHOD http://host/path/file | [encodedcredentials] [decodedusername:andpassword]")
+	print("Time and Date | ClientIP:Port -> ServerIP:Port | METHOD http://host/path/file | [encodedcredentials] [decodedusername:andpassword]")
 
 if "-h" in argv or "--help" in argv:
 	print_usage()
 	exit()
 
-sniff_args = { "prn" : format_password, "store" : 0, "filter" : default_bpf_filter, "lfilter" : check_for_password }
+sniff_args = {"prn": format_password, "store": 0, "filter": default_bpf_filter, "lfilter": check_for_password}
 													# time to handle options without arguments
 if "-q" in argv or "--quiet" in argv:
 	sniff_args["prn"] = None							# unset print function
