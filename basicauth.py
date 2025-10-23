@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 
-from logging import getLogger, ERROR, WARNING
-from sys import argv, exit
-from re import compile
-from base64 import b64decode
-from time import ctime
-getLogger("scapy.runtime").setLevel(ERROR)
+import base64
+import logging
+import re
+import sys
+import time
+logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 conf.verb = 0
-getLogger("scapy.runtime").setLevel(WARNING)
+logging.getLogger("scapy.runtime").setLevel(logging.WARNING)
 
 DEFAULT_BPF_FILTER: str = "tcp port 80"
-basic_auth_filter = compile(rb"Authorization: Basic (.*)")
-host_filter = compile(rb"Host: (.*)")
-valid_methods = ["OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT"]
+basic_auth_filter = re.compile(rb"Authorization: Basic (.*)")
+host_filter = re.compile(rb"Host: (.*)")
 valid_methods = [b"OPTIONS", b"GET", b"HEAD", b"POST", b"PUT", b"DELETE", b"TRACE", b"CONNECT"]
-method_filter = compile(b"(" + b"|".join(valid_methods) + b") (.*) HTTP.*?")
+method_filter = re.compile(b"(" + b"|".join(valid_methods) + b") (.*) HTTP.*?")
+
 
 def format_password(packet):
 	if Raw not in packet:
@@ -24,7 +24,7 @@ def format_password(packet):
 	contains_basic_auth = basic_auth_filter.search(raw)
 	if contains_basic_auth:
 		result = ""
-		result += ctime() + " | "
+		result += time.ctime() + " | "
 		client = ""
 		try:
 			client = f"{packet[IP].src}:{packet[TCP].sport}"
@@ -58,7 +58,7 @@ def format_password(packet):
 		result += f"{creds}"
 		plain = ""
 		try:
-			plain = b64decode(creds).decode()
+			plain = base64.b64decode(creds).decode()
 		except TypeError:
 			plain = "DecodingError"
 		result += f"] [{plain}]"
@@ -69,7 +69,7 @@ def check_for_password(packet) -> bool:
         return False
     return basic_auth_filter.search(packet[Raw].load) is not None
 
-def print_usage():
+def print_usage(argv):
 	whitespace_for_indent = " " * len(argv[0])
 	print("usage:   \t" + argv[0] + " [OPTION] [...]")
 	print("         \t" + argv[0] + " -r <capture file> [OPTION] [...]")
@@ -86,11 +86,11 @@ def print_usage():
 	print("         \t" + whitespace_for_indent + " --berkeleypf <berkeley packet filter>")
 	print("         \t" + whitespace_for_indent + " -w           <dump file>")
 	print("         \t" + whitespace_for_indent + " --write      <dump file>")
-	print("         \t" + whitespace_for_indent + " -W           means open in Wireshark")
-	print("         \t" + whitespace_for_indent + " --wireshark  means open in Wireshark")
-	print("         \t" + whitespace_for_indent + " --Wireshark  means open in Wireshark")
-	print("         \t" + whitespace_for_indent + " -q           means don't format or print found credentials")
-	print("         \t" + whitespace_for_indent + " --quiet      means don't format or print found credentials")
+	print("         \t" + whitespace_for_indent + " -W           open in Wireshark")
+	print("         \t" + whitespace_for_indent + " --wireshark  open in Wireshark")
+	print("         \t" + whitespace_for_indent + " --Wireshark  open in Wireshark")
+	print("         \t" + whitespace_for_indent + " -q           don't format or print found credentials")
+	print("         \t" + whitespace_for_indent + " --quiet      don't format or print found credentials")
 	print("examples:\t" + argv[0] + " -i eth0")
 	print("     \t\t\t Sniff on interface eth0")
 	print("         \t" + argv[0] + " -r capture.pcap")
@@ -114,7 +114,7 @@ def main(argv):
 	open_in_wireshark = False
 	dump_file = None
 	if "-h" in argv or "--help" in argv:
-		print_usage()
+		print_usage(argv)
 		exit()
 
 	sniff_args = {"prn": format_password, "store": 0, "filter": DEFAULT_BPF_FILTER, "lfilter": check_for_password}
@@ -138,12 +138,12 @@ def main(argv):
 			elif argv[arg_index] in ["-t", "--time"]:				# time
 				sniff_args["timeout"] = float(argv[arg_index + 1])
 			elif argv[arg_index] in ["-bpf", "--bpf", "--berkeley", "--berkeleypf"]:		# berkeley packet filter
-				sniff_args["filter"] = argv[arg_index + 1]
+				sniff_args["filter"] = sys.argv[arg_index + 1]
 			elif argv[arg_index] in ["-w", "--write"]:							# write to file
 				sniff_args["store"] = 1									# re-enable store, by default is off
 				dump_file = argv[arg_index + 1]							# set file to dump packets to
 			else:
-				print_usage()
+				print_usage(argv)
 				exit()
 		print_header()
 		saved_packets = sniff(**sniff_args)
@@ -153,8 +153,8 @@ def main(argv):
 			if open_in_wireshark:										# also if we want to open in wireshark
 				wireshark(saved_packets)									# do it
 	else:													# if we don't have an odd amount of arguments, they didn't enter valid arguments
-		print_usage()
+		print_usage(argv)
 		exit()
 
 if __name__ == "__main__":
-	main(argv)
+	main(sys.argv)
